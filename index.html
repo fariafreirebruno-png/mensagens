@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mensagens Prontas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: barra de ferramentas fixa no topo + grade de cartões que vira 1 coluna no celular */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #1d2420;
+  --muted: #66716b;
+  --line: #dde3df;
+  --accent: #1f6f5c;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f0eb;
+  --danger: #b4412f;
+  --danger-soft: #f8e6e2;
+  --field: #f8faf8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141917; --surface: #1c2320; --ink: #e6ece8; --muted: #93a19a;
+    --line: #2d3733; --accent: #5cc3a5; --accent-ink: #0e1a16; --accent-soft: #1f3a32;
+    --danger: #ef8a78; --danger-soft: #3a2420; --field: #171d1a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141917; --surface: #1c2320; --ink: #e6ece8; --muted: #93a19a;
+  --line: #2d3733; --accent: #5cc3a5; --accent-ink: #0e1a16; --accent-soft: #1f3a32;
+  --danger: #ef8a78; --danger-soft: #3a2420; --field: #171d1a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
+}
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 18px; }
+h1 { font-family: var(--font-display); font-size: 1.9rem; line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 60ch; }
+.status { font-size: 0.82rem; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.status.saving .dot { background: var(--muted); }
+.status.error .dot { background: var(--danger); }
+
+.toolbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 10px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin-bottom: 14px;
+}
+.search { flex: 1 1 240px; position: relative; min-width: 0; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search input {
+  width: 100%; font: inherit; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px 10px 36px;
+}
+button { font: inherit; cursor: pointer; }
+.btn-primary {
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px;
+  padding: 10px 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover { filter: brightness(1.07); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
+}
+.card-head { display: flex; gap: 8px; align-items: center; }
+.title {
+  flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
+  color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 8px;
+  padding: 4px 6px; margin-left: -6px;
+}
+.title:hover, .title:focus { border-color: var(--line); background: var(--field); outline: none; }
+.title::placeholder, .body::placeholder { color: var(--muted); opacity: 0.8; }
+.icon-btn {
+  background: transparent; border: 0; color: var(--muted); border-radius: 8px;
+  width: 32px; height: 32px; display: grid; place-items: center; flex: none;
+}
+.icon-btn:hover { background: var(--danger-soft); color: var(--danger); }
+.body {
+  width: 100%; min-height: 96px; resize: vertical; font: inherit; color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px; overflow: hidden;
+}
+.body:focus { border-color: var(--accent); outline: none; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.count { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.copy {
+  background: var(--accent-soft); color: var(--accent); border: 0; border-radius: 8px;
+  padding: 8px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+  min-width: 112px; justify-content: center; transition: background .15s, color .15s;
+}
+.copy:hover { background: var(--accent); color: var(--accent-ink); }
+.copy.done { background: var(--accent); color: var(--accent-ink); }
+.copy:disabled { opacity: 0.45; cursor: default; }
+.copy:disabled:hover { background: var(--accent-soft); color: var(--accent); }
+
+.confirm {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between;
+  background: var(--danger-soft); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem;
+}
+.confirm .actions { display: flex; gap: 6px; }
+.confirm button { border: 0; border-radius: 6px; padding: 5px 10px; font-weight: 600; }
+.btn-del { background: var(--danger); color: var(--surface); }
+.btn-cancel { background: transparent; color: var(--ink); }
+
+.btn-secondary {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--accent-soft); color: var(--ink); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+}
+.banner.error { background: var(--danger-soft); }
+.banner .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.banner button { border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 600; background: var(--surface); color: var(--ink); }
+.banner button.main { background: var(--accent); color: var(--accent-ink); }
+.handle {
+  cursor: grab; color: var(--muted); width: 24px; height: 32px; display: grid; place-items: center;
+  border-radius: 6px; flex: none; margin-left: -4px; touch-action: none;
+}
+.handle:hover { background: var(--field); color: var(--ink); }
+.move-btns { display: flex; gap: 2px; }
+.move-btns .icon-btn:hover { background: var(--accent-soft); color: var(--accent); }
+.move-btns .icon-btn:disabled { opacity: 0.3; cursor: default; background: transparent; color: var(--muted); }
+.card.dragging { opacity: 0.4; }
+.card.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.foot-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.searching .handle, .searching .move-btns { display: none; }
+.empty { color: var(--muted); padding: 28px 4px; }
+.tag { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Mensagens Prontas</h1>
+      <p class="sub">Escreva suas mensagens padrão uma vez e copie com um clique sempre que precisar.</p>
+    </div>
+    <div class="status" id="status" aria-live="polite"><span class="dot"></span><span id="statusText">Carregando…</span></div>
+  </header>
+
+  <div class="toolbar">
+    <label class="search" for="busca">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="busca" type="search" placeholder="Buscar por título ou texto" autocomplete="off">
+    </label>
+    <button class="btn-primary" id="novo" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Nova mensagem
+    </button>
+    <button class="btn-secondary" id="exportar" type="button" title="Baixar um arquivo com todas as mensagens">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+      Exportar
+    </button>
+    <button class="btn-secondary" id="importar" type="button" title="Carregar um arquivo exportado">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg>
+      Importar
+    </button>
+    <input type="file" id="arquivo" accept=".json,application/json" hidden>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden></p>
+</div>
+
+<script>
+(function () {
+  const LS_KEY = "mensagens-prontas-v1";
+  const EXEMPLOS = [
+    { titulo: "Saudação inicial", texto: "Olá! Tudo bem? Obrigado pelo contato.\nComo posso ajudar?" },
+    { titulo: "Pedido de documentos", texto: "Para dar andamento, preciso que você me envie:\n- Documento com foto\n- Comprovante de endereço\n\nPode mandar por aqui mesmo." },
+    { titulo: "Encerramento", texto: "Qualquer dúvida, estou à disposição.\nTenha um ótimo dia!" }
+  ];
+
+  let cards = [];
+  let docRef = null;
+  let saveTimer = null;
+  let saving = false, pending = false;
+  let confirmId = null;
+  let dragId = null;
+  document.addEventListener("mouseup", () => { if (!dragId) grid.querySelectorAll(".card[draggable=true]").forEach(x => x.draggable = false); });
+
+  function moveTo(from, to) {
+    if (from < 0 || to < 0 || from >= cards.length || to >= cards.length || from === to) return;
+    const [item] = cards.splice(from, 1);
+    cards.splice(to, 0, item);
+    render(); scheduleSave();
+  }
+
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+  const busca = document.getElementById("busca");
+  const statusEl = document.getElementById("status");
+  const statusText = document.getElementById("statusText");
+
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const fromList = list => list.map(c => ({ id: c.id || uid(), titulo: c.titulo || "", texto: c.texto || "" }));
+
+  function setStatus(kind, text) {
+    statusEl.className = "status " + kind;
+    statusText.textContent = text;
+  }
+
+  // ---------- Armazenamento ----------
+  function readLocal() {
+    try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function writeLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(cards)); } catch (e) {}
+  }
+
+  function scheduleSave() {
+    writeLocal();
+    setStatus("saving", "Salvando…");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 700);
+  }
+  async function flush() {
+    if (!docRef) { setStatus("", "Salvo neste navegador"); return; }
+    if (saving) { pending = true; return; }
+    saving = true;
+    try {
+      await docRef.set({ cards: cards.map(({ id, titulo, texto }) => ({ id, titulo, texto })), atualizado: new Date().toISOString() });
+      setStatus("", "Tudo salvo");
+    } catch (e) {
+      setStatus("error", "Não foi possível salvar na nuvem. Suas mensagens estão guardadas neste navegador.");
+    }
+    saving = false;
+    if (pending) { pending = false; flush(); }
+  }
+
+  // ---------- Copiar ----------
+  async function copyText(text, btn, ta) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {}
+    if (!ok) {
+      try {
+        ta.focus(); ta.select();
+        ok = document.execCommand("copy");
+      } catch (e) { ok = false; }
+    }
+    const label = btn.querySelector("span");
+    if (ok) {
+      btn.classList.add("done"); label.textContent = "Copiado!";
+    } else {
+      ta.focus(); ta.select(); label.textContent = "Texto selecionado";
+    }
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.classList.remove("done"); label.textContent = "Copiar"; }, 1500);
+  }
+
+  // ---------- Interface ----------
+  function autosize(ta) { ta.style.height = "auto"; ta.style.height = Math.max(96, ta.scrollHeight + 2) + "px"; }
+  const plural = n => n + (n === 1 ? " caractere" : " caracteres");
+
+  function cardEl(c) {
+    const el = document.createElement("article");
+    el.className = "card"; el.dataset.id = c.id;
+
+    const head = document.createElement("div"); head.className = "card-head";
+    const title = document.createElement("input");
+    title.className = "title"; title.id = "t-" + c.id; title.value = c.titulo;
+    title.placeholder = "Título da mensagem"; title.setAttribute("aria-label", "Título");
+    title.addEventListener("input", () => { c.titulo = title.value; scheduleSave(); });
+
+    const del = document.createElement("button");
+    del.className = "icon-btn"; del.type = "button"; del.title = "Excluir mensagem"; del.setAttribute("aria-label", "Excluir mensagem");
+    del.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+    del.addEventListener("click", () => { confirmId = c.id; render(); });
+
+    const handle = document.createElement("span");
+    handle.className = "handle"; handle.title = "Arraste para mudar a ordem"; handle.setAttribute("aria-hidden", "true");
+    handle.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+    handle.addEventListener("mousedown", () => { el.draggable = true; });
+    handle.addEventListener("touchstart", () => { el.draggable = true; }, { passive: true });
+    el.addEventListener("dragstart", e => {
+      dragId = c.id; el.classList.add("dragging");
+      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", c.id); } catch (err) {}
+    });
+    el.addEventListener("dragend", () => {
+      el.draggable = false; el.classList.remove("dragging"); dragId = null;
+      grid.querySelectorAll(".drop-target").forEach(x => x.classList.remove("drop-target"));
+    });
+    el.addEventListener("dragover", e => {
+      if (!dragId || dragId === c.id) return;
+      e.preventDefault(); el.classList.add("drop-target");
+    });
+    el.addEventListener("dragleave", e => { if (!el.contains(e.relatedTarget)) el.classList.remove("drop-target"); });
+    el.addEventListener("drop", e => {
+      e.preventDefault();
+      if (!dragId || dragId === c.id) return;
+      const from = cards.findIndex(x => x.id === dragId);
+      const to = cards.findIndex(x => x.id === c.id);
+      moveTo(from, to);
+    });
+    head.append(handle, title, del);
+
+    const ta = document.createElement("textarea");
+    ta.className = "body"; ta.id = "m-" + c.id; ta.value = c.texto;
+    ta.placeholder = "Escreva aqui a mensagem que você quer copiar…"; ta.setAttribute("aria-label", "Mensagem");
+
+    const foot = document.createElement("div"); foot.className = "card-foot";
+    const count = document.createElement("span"); count.className = "count"; count.textContent = plural(c.texto.length);
+    const copy = document.createElement("button");
+    copy.className = "copy"; copy.type = "button"; copy.disabled = !c.texto;
+    copy.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><span>Copiar</span>';
+    copy.addEventListener("click", () => copyText(c.texto, copy, ta));
+
+    ta.addEventListener("input", () => {
+      c.texto = ta.value; autosize(ta);
+      count.textContent = plural(c.texto.length); copy.disabled = !c.texto;
+      scheduleSave();
+    });
+    const idx = cards.indexOf(c);
+    const moves = document.createElement("div"); moves.className = "move-btns";
+    const mk = (label, path, delta) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "icon-btn"; b.title = label; b.setAttribute("aria-label", label);
+      b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="' + path + '"/></svg>';
+      b.disabled = idx + delta < 0 || idx + delta >= cards.length;
+      b.addEventListener("click", () => { moveTo(idx, idx + delta); const nb = document.querySelector('[data-id="' + c.id + '"] .move-btns button:nth-child(' + (delta < 0 ? 1 : 2) + ')'); if (nb && !nb.disabled) nb.focus(); });
+      return b;
+    };
+    moves.append(mk("Mover para antes", "M15 18l-6-6 6-6", -1), mk("Mover para depois", "M9 18l6-6-6-6", 1));
+    const left = document.createElement("div"); left.className = "foot-left";
+    left.append(moves, count);
+    foot.append(left, copy);
+    el.append(head, ta, foot);
+
+    if (confirmId === c.id) {
+      const box = document.createElement("div"); box.className = "confirm";
+      box.innerHTML = '<span>Excluir esta mensagem?</span>';
+      const actions = document.createElement("div"); actions.className = "actions";
+      const no = document.createElement("button"); no.type = "button"; no.className = "btn-cancel"; no.textContent = "Cancelar";
+      const yes = document.createElement("button"); yes.type = "button"; yes.className = "btn-del"; yes.textContent = "Excluir";
+      no.addEventListener("click", () => { confirmId = null; render(); });
+      yes.addEventListener("click", () => { cards = cards.filter(x => x.id !== c.id); confirmId = null; render(); scheduleSave(); });
+      actions.append(no, yes); box.append(actions); el.append(box);
+    }
+    requestAnimationFrame(() => autosize(ta));
+    return el;
+  }
+
+  function render() {
+    const q = busca.value.trim().toLowerCase();
+    const list = q ? cards.filter(c => (c.titulo + " " + c.texto).toLowerCase().includes(q)) : cards;
+    grid.classList.toggle("searching", !!q);
+    grid.replaceChildren(...list.map(cardEl));
+    if (!cards.length) { empty.hidden = false; empty.textContent = "Nenhuma mensagem ainda. Clique em “Nova mensagem” para criar a primeira."; }
+    else if (!list.length) { empty.hidden = false; empty.textContent = "Nenhuma mensagem encontrada para “" + busca.value.trim() + "”."; }
+    else empty.hidden = true;
+  }
+
+  document.getElementById("novo").addEventListener("click", () => {
+    busca.value = "";
+    const c = { id: uid(), titulo: "", texto: "" };
+    cards.unshift(c); render(); scheduleSave();
+    const t = document.getElementById("t-" + c.id); if (t) t.focus();
+  });
+  busca.addEventListener("input", render);
+
+  // ---------- Exportar / Importar ----------
+  const banner = document.getElementById("banner");
+  const arquivo = document.getElementById("arquivo");
+  let bannerTimer = null;
+
+  function showBanner(text, kind, buttons) {
+    clearTimeout(bannerTimer);
+    banner.className = "banner" + (kind ? " " + kind : "");
+    banner.replaceChildren();
+    const span = document.createElement("span"); span.textContent = text; banner.append(span);
+    if (buttons && buttons.length) {
+      const actions = document.createElement("div"); actions.className = "actions";
+      buttons.forEach(([label, fn, main]) => {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+        if (main) b.className = "main";
+        b.addEventListener("click", fn); actions.append(b);
+      });
+      banner.append(actions);
+    } else {
+      bannerTimer = setTimeout(() => { banner.hidden = true; }, 4000);
+    }
+    banner.hidden = false;
+  }
+
+  document.getElementById("exportar").addEventListener("click", () => {
+    const data = { app: "mensagens-prontas", versao: 1, exportado: new Date().toISOString(),
+      mensagens: cards.map(({ titulo, texto }) => ({ titulo, texto })) };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    a.href = URL.createObjectURL(blob);
+    a.download = "mensagens-prontas-" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + ".json";
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    showBanner("Arquivo exportado com " + cards.length + (cards.length === 1 ? " mensagem." : " mensagens.") + " Leve-o para o outro computador e use “Importar”.");
+  });
+
+  document.getElementById("importar").addEventListener("click", () => { arquivo.value = ""; arquivo.click(); });
+
+  arquivo.addEventListener("change", () => {
+    const f = arquivo.files && arquivo.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let lista = null;
+      try {
+        const data = JSON.parse(reader.result);
+        lista = Array.isArray(data) ? data : data.mensagens;
+        if (!Array.isArray(lista)) throw 0;
+        lista = lista.filter(x => x && (typeof x.titulo === "string" || typeof x.texto === "string"));
+      } catch (e) { lista = null; }
+      if (!lista || !lista.length) {
+        showBanner("Esse arquivo não tem mensagens válidas. Escolha um arquivo .json criado pelo botão “Exportar”.", "error");
+        return;
+      }
+      const n = lista.length + (lista.length === 1 ? " mensagem" : " mensagens");
+      const close = () => { banner.hidden = true; };
+      showBanner("O arquivo tem " + n + ". O que fazer com elas?", "", [
+        ["Adicionar às atuais", () => { cards = cards.concat(fromList(lista.map(x => ({ titulo: x.titulo, texto: x.texto })))); busca.value = ""; render(); scheduleSave(); showBanner(n + " adicionada(s) ao final."); }, true],
+        ["Substituir todas", () => { cards = fromList(lista.map(x => ({ titulo: x.titulo, texto: x.texto }))); busca.value = ""; render(); scheduleSave(); showBanner("Mensagens substituídas pelas do arquivo."); }],
+        ["Cancelar", close]
+      ]);
+    };
+    reader.onerror = () => showBanner("Não consegui ler esse arquivo. Tente de novo.", "error");
+    reader.readAsText(f);
+  });
+
+  // ---------- Início ----------
+  const local = readLocal();
+  cards = fromList(local && local.length ? local : EXEMPLOS);
+  render();
+  setStatus("", local ? "Salvo neste navegador" : "Exemplos: edite à vontade");
+
+  (async function connect() {
+    if (!window.claude || !window.claude.use) return;
+    try {
+      const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      if (!db || !user) return;
+      const id = await user.id();
+      if (!id) return;
+      docRef = db.doc("data/users/" + id + "/mensagens");
+      const snap = await docRef.get();
+      const remote = snap.exists ? snap.data().cards : null;
+      const editing = document.activeElement && grid.contains(document.activeElement);
+      if (remote && remote.length && !editing) {
+        cards = fromList(remote); writeLocal(); render();
+        setStatus("", "Tudo salvo");
+      } else if (local && local.length) {
+        flush();
+      } else {
+        setStatus("", "Exemplos: edite à vontade");
+      }
+    } catch (e) {
+      docRef = null;
+    }
+  })();
+})();
+</script>
+</body>
+</html>
